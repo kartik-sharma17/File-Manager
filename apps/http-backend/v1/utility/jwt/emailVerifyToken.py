@@ -1,6 +1,7 @@
 from jose import jwt, JWTError, ExpiredSignatureError
 from config import settings
 from datetime import datetime, timedelta
+from fastapi import HTTPException
 
 
 async def GenerateEmailVerifyToken(email: str):
@@ -17,15 +18,19 @@ async def VerifyEmailToken(token):
         return {"status": True, "data": payload, "message": "Verification Completed"}
 
     except ExpiredSignatureError:
-        return {
-            "status": False,
-            "data": "",
-            "message": "Token Expired, Please try Again",
-        }
+        return HTTPException(
+            status_code=401,
+            detail={
+                "status": False,
+                "message": "Token expired, please try again",
+                },
+        )
 
     except JWTError:
-        return {
-            "status": False,
-            "data": "",
-            "message": "Invalid Token Please Try Again",
-        }
+        return HTTPException(
+            status_code=401,
+            detail={
+                "status": False,
+                "message": "Invalid Token Please Try Again",
+                },
+        )

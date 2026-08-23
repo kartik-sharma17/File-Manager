@@ -1,7 +1,7 @@
 from jose import jwt, JWTError, ExpiredSignatureError
 from config import settings
 from datetime import datetime, timedelta
-from v1.schema.authSchema.tokenData import tokenSchema
+from v1.schema import tokenSchema
 from fastapi import HTTPException
 
 
@@ -21,7 +21,7 @@ async def VerifyToken(token):
 
     except ExpiredSignatureError:
         raise HTTPException(
-            status_code=500,
+            status_code=401,
             detail={
                 "status": False,
                 "message": "Token expired, please login again",
@@ -31,7 +31,7 @@ async def VerifyToken(token):
 
     except JWTError:
         raise HTTPException(
-            status_code=500,
+            status_code=401,
             detail={
                 "status": False,
                 "message": "invalid Token, please try again",

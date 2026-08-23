@@ -1,6 +1,8 @@
 import resend
 from jinja2 import Template
 from config import settings
+from fastapi import HTTPException
+from ..logger import log
 
 resend.api_key = settings.RESEND_API_KEY
 
@@ -21,7 +23,13 @@ async def SendVerificationEmail(email: str, name: str, token: str):
 
         return True
     except Exception as e:
-        print(f"somethings went wrong whiling sending email {e}")
-        return False
+        log.info(f"somethings went wrong whiling sending email {e}")
+        raise HTTPException(
+            status_code=500,
+            details={
+                "message":"Something went wrong while sending verification mail, please try again later",
+                "status":False,
+            }
+        )
 
 
