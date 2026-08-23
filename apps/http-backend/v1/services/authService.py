@@ -1,8 +1,8 @@
 from v1.models import User
 from fastapi import HTTPException
+from v1.schema import registerUser, LoginSchema
 from v1.db.connectDB import getDB
-from v1.utility import response
-from v1.utility import HashPassword, GenerateEmailVerifyToken, SendVerificationEmail, log
+from v1.utility import response, HashPassword, GenerateEmailVerifyToken, SendVerificationEmail, log, VerifyPassword, GenerateToken, VerifyEmailToken
 
 class Auth:
     @property
@@ -143,4 +143,138 @@ class Auth:
                 "message":"Something went wrong, please try again",
                 "status":False
                 }
+            )
+
+    async def VerifyAccount(self, token):
+        try:
+            result = await VerifyEmailToken(token)
+
+            if result is None:
+                raise HTTPException(
+                    status_code=401,
+                    detail={
+                        "status": False,
+                        "message": "Invalid or expired verification link, please try again",
+                    },
+                )
+
+            email = result["data"]["sub"]
+
+            user = await self.collection.find_one({"email": email})
+
+            if not user:
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "status": False,
+                        "message": "User not found",
+                    },
+                )
+
+            await self.collection.update_one(
+                {"email": email}, {"$set": {"is_verified": True}}
+            )
+
+            token = GenerateToken(
+                data={
+                    "email": user["email"],
+                    "userName": user["full_name"],
+                    "userId": str(user["_id"]),
+                }
+            )
+
+            return response(
+                message="Account Verification Successful",
+                data={
+                    "token": token,
+                    "name": user["full_name"],
+                    "email": user["email"],
+                    "last_login": user.get("last_login"),
+                },
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "message": "Something went wrong while verifying your account, please try again",
+                    "status": False,
+                },
+            )
+
+    async def Login(self, cred:LoginSchema):
+        try:
+            email = cred.email
+            password = cred.password
+
+            if not email:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"status": False, "message": "please Enter Email ID"},
+                )
+
+            if not password:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"status": False, "message": "please Enter Password"},
+                )
+
+            user = await self.collection.find_one({"email": email})
+
+            if user is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "status": False,
+                        "message": "No account associated with this email ID, please check your email ID or sign up",
+                    },
+                )
+
+            if user.get("is_verified") is False:
+                raise HTTPException(
+                    status_code=401,
+                    detail={
+                        "status": False,
+                        "message": "Account is not verified, please verify your account to login",
+                    },
+                )
+
+            if not VerifyPassword(password, user["password"]):
+                raise HTTPException(
+                    status_code=401,
+                    detail={
+                        "status": False,
+                        "message": "Wrong password, please check your password and try again",
+                    },
+                )
+
+            token = GenerateToken(
+                data={
+                    "email": user["email"],
+                    "userName": user["full_name"],
+                    "userId": str(user["_id"]),
+                }
+            )
+
+            return response(
+                message="Login Successfully",
+                data={
+                    "token": token,
+                    "name": user["full_name"],
+                    "email": user["email"],
+                    "last_login": user.get("last_login"),
+                },
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "message": "Something went wrong, please try again",
+                    "status": False,
+                },
             )

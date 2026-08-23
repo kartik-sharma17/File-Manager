@@ -1,2 +1,2 @@
-from .userSchema import registerUser
+from .userSchema import registerUser, LoginSchema
 from .tokenSchema import tokenSchema

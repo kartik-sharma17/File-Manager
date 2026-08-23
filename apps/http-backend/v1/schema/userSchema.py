@@ -8,3 +8,8 @@ class registerUser(BaseModel):
     role: str
     avatar: Optional[str] = None
     phone: Optional[str] = None
+
+
+class LoginSchema(BaseModel):
+    email: EmailStr
+    password: str

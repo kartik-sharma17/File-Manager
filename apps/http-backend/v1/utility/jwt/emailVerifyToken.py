@@ -1,3 +1,4 @@
+
 from jose import jwt, JWTError, ExpiredSignatureError
 from config import settings
 from datetime import datetime, timedelta
@@ -15,7 +16,7 @@ async def VerifyEmailToken(token):
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-        return {"status": True, "data": payload, "message": "Verification Completed"}
+        return payload
 
     except ExpiredSignatureError:
         return HTTPException(
