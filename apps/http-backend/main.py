@@ -1,7 +1,10 @@
+from sys import prefix
+
 from fastapi import FastAPI
 from v1.db.connectDB import connectDB
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from v1.routers import authrouter
 
 
 app = FastAPI()
@@ -16,6 +19,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(authrouter, prefix="/v1")
 
 @app.on_event("startup")
 async def startup_event():
