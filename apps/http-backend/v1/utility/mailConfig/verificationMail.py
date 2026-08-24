@@ -15,9 +15,9 @@ async def SendVerificationEmail(email: str, name: str, token: str):
             html_content = html_template.render(name=name, verify_link=verify_link)
 
         resend.Emails.send({
-            "from": f"{settings.MAIL_FROM_NAME} <support@clarixai.in>",
+            "from": f"{settings.MAIL_FROM_NAME} <onboarding@resend.dev>",
             "to": [email],
-            "subject": "Verify Your Clarix Account",
+            "subject": "Verify Your File Manager Account",
             "html": html_content,
         })
 
@@ -26,7 +26,7 @@ async def SendVerificationEmail(email: str, name: str, token: str):
         log.info(f"somethings went wrong whiling sending email {e}")
         raise HTTPException(
             status_code=500,
-            details={
+            detail={
                 "message":"Something went wrong while sending verification mail, please try again later",
                 "status":False,
             }

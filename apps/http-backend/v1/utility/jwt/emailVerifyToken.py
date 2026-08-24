@@ -19,7 +19,7 @@ async def VerifyEmailToken(token):
         return payload
 
     except ExpiredSignatureError:
-        return HTTPException(
+        raise HTTPException(
             status_code=401,
             detail={
                 "status": False,
@@ -28,7 +28,7 @@ async def VerifyEmailToken(token):
         )
 
     except JWTError:
-        return HTTPException(
+        raise HTTPException(
             status_code=401,
             detail={
                 "status": False,

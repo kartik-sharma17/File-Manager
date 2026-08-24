@@ -6,7 +6,7 @@ from v1.utility import response, HashPassword, GenerateEmailVerifyToken, SendVer
 
 class Auth:
     @property
-    async def collection(self):
+    def collection(self):
         return getDB()["User"]
 
     async def RegisterUser(self, user: registerUser):
@@ -29,7 +29,6 @@ class Auth:
                             "$set": {
                                 "full_name": user.full_name,
                                 "password": hashed_password,
-                                "role": user.role,
                                 "avatar": user.avatar,
                                 "phone": user.phone if user.phone else None,
                             }
@@ -58,7 +57,6 @@ class Auth:
                 full_name=user.full_name,
                 email=user.email,
                 password=hashed_password,
-                role=user.role,
                 avatar=user.avatar,
                 phone=user.phone if user.phone else None,
             )
@@ -86,7 +84,7 @@ class Auth:
             log.info(f"this is a issue {str(e)}")
             return HTTPException(
                 status_code=500,
-                details={
+                detail={
                     "message":"Something went wrong while creating a new account, please try again",
                     "status":False
                 }
@@ -107,7 +105,7 @@ class Auth:
 
             if existUser.get("is_verified"):
                 raise HTTPException(
-                    status_code=500,
+                    status_code=409,
                     detail={
                         "status": False,
                         "message": "Account already verified, please login",
@@ -158,7 +156,7 @@ class Auth:
                     },
                 )
 
-            email = result["data"]["sub"]
+            email = result["sub"]
 
             user = await self.collection.find_one({"email": email})
 
@@ -278,3 +276,5 @@ class Auth:
                     "status": False,
                 },
             )
+
+auth_service = Auth()
