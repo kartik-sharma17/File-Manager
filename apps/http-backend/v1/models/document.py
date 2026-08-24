@@ -1,0 +1,21 @@
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+
+class Document(BaseModel):
+    id: Optional[str] = Field(default=None, alias="_id")
+    owner_id: str
+    file_name: str
+    url: str
+    mime_type: str
+    size: int
+    is_public: bool = False
+    share_token: Optional[str] = None 
+    status: str = "uploading"          
+    checksum: Optional[str] = None     
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True

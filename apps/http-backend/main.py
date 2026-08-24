@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from v1.db.connectDB import connectDB
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from v1.routers import authrouter
+from v1.routers import authrouter, documentRouter
 
 
 app = FastAPI()
@@ -21,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(authrouter, prefix="/v1")
+app.include_router(documentRouter, prefix="/v1")
 
 @app.on_event("startup")
 async def startup_event():
