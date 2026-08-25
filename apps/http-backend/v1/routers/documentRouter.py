@@ -19,3 +19,31 @@ async def confirmUpload(document_id: str, user=Depends(verifyUserDependency)):
 @documentRouter.get("/download/{document_id}")
 async def getDownloadUrl(document_id: str, user=Depends(verifyUserDependency)):
     return await document_service.GetDownloadUrl(user, document_id)
+
+
+@documentRouter.get("/share/download")
+async def getDownloadUrlByShareToken(share_token: str):
+    return await document_service.GetDownloadUrlByShareToken(share_token)
+
+
+@documentRouter.post("/share/{document_id}")
+async def generateShareToken(
+    document_id: str,
+    expires_minutes: int = 5,
+    user=Depends(verifyUserDependency),
+):
+    return await document_service.GenerateShareToken(user, document_id, expires_minutes)
+
+
+@documentRouter.patch("/visibility/{document_id}")
+async def changeVisibility(
+    document_id: str,
+    is_public: bool,
+    user=Depends(verifyUserDependency),
+):
+    return await document_service.ChangeVisibility(user, document_id, is_public)
+
+
+@documentRouter.get("/all")
+async def getAllDocuments(user=Depends(verifyUserDependency)):
+    return await document_service.GetAllDocument(user)

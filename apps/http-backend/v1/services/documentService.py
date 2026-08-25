@@ -10,6 +10,8 @@ from v1.utility import (
     GeneratePresignedDownloadUrl,
     VerifyObjectExists,
     response,
+    GenerateShareToken,
+    VerifyShareToken
 )
 from v1.models import Document
 
@@ -173,13 +175,14 @@ class DocumentService:
                     detail={"status": False, "message": "Document not found"},
                 )
 
-            if not document.get("is_public"):
-                owner_id = str(user["_id"]) if user else None
-                if owner_id != document["owner_id"]:
-                    raise HTTPException(
-                        status_code=403,
-                        detail={"status": False, "message": "You do not have access to this document"},
-                    )
+            owner_id = str(user["_id"])
+            is_owner = document["owner_id"] == owner_id
+
+            if not is_owner:
+                raise HTTPException(
+                    status_code=403,
+                    detail={"status": False, "message": "You do not have access to this document"},
+                )
 
             download_url = await GeneratePresignedDownloadUrl(key=document["url"])
 
@@ -210,5 +213,184 @@ class DocumentService:
                 detail={"status": False, "message": "Something went wrong while generating download URL"},
             )
 
+    async def GetDownloadUrlByShareToken(self, share_token: str):
+        try:
+            payload = await VerifyShareToken(share_token)
+            document_id = payload.get("document_id")
+
+            if not document_id:
+                raise HTTPException(
+                    status_code=401,
+                    detail={"status": False, "message": "Invalid share token"},
+                )
+
+            document = await self.collection.find_one({"_id": ObjectId(document_id)})
+
+            if not document:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"status": False, "message": "Document not found"},
+                )
+
+            if not document.get("is_public"):
+                raise HTTPException(
+                    status_code=403,
+                    detail={"status": False, "message": "This document is no longer public"},
+                )
+
+            download_url = await GeneratePresignedDownloadUrl(key=document["url"])
+
+            if not download_url:
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "status": False,
+                        "message": "Something went wrong while generating download URL, please try again",
+                    },
+                )
+
+            return response(
+                message="Download URL generated successfully",
+                data={
+                    "file_name": document["file_name"],
+                    "download_url": download_url,
+                    "expires_in": 900,
+                },
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={"status": False, "message": "Something went wrong while generating download URL"},
+            )
+
+    async def GenerateShareToken(self, user: dict, document_id: str, expires_minutes: int = 5):
+        try:
+            owner_id = str(user["_id"])
+
+            document = await self.collection.find_one({"_id": ObjectId(document_id)})
+
+            if not document:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"status": False, "message": "Document not found"},
+                )
+
+            if document["owner_id"] != owner_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail={"status": False, "message": "You do not have access to this document"},
+                )
+
+            if not document.get("is_public"):
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "status": False,
+                        "message": "Document must be public before generating a share link. Change visibility first.",
+                    },
+                )
+
+            token, actual_expiry = GenerateShareToken(document_id, expires_minutes)
+
+            await self.collection.update_one(
+                {"_id": ObjectId(document_id)},
+                {"$set": {"share_token": token, "updated_at": datetime.now(timezone.utc)}},
+            )
+
+            return response(
+                message="Share link generated successfully",
+                data={
+                    "share_token": token,
+                    "expires_in_minutes": actual_expiry,
+                },
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={"status": False, "message": "Something went wrong while generating share link"},
+            )
+
+    async def ChangeVisibility(self, user: dict, document_id: str, is_public: bool):
+        try:
+            owner_id = str(user["_id"])
+
+            document = await self.collection.find_one({"_id": ObjectId(document_id)})
+
+            if not document:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"status": False, "message": "Document not found"},
+                )
+
+            if document["owner_id"] != owner_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail={"status": False, "message": "You do not have access to this document"},
+                )
+
+            update_fields = {"is_public": is_public, "updated_at": datetime.now(timezone.utc)}
+
+            if not is_public:
+                update_fields["share_token"] = None
+
+            await self.collection.update_one(
+                {"_id": ObjectId(document_id)},
+                {"$set": update_fields},
+            )
+
+            return response(
+                message="Visibility updated successfully",
+                data={"document_id": document_id, "is_public": is_public},
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={"status": False, "message": "Something went wrong while updating visibility"},
+            )
+
+    async def GetAllDocument(self, user: dict):
+        try:
+            owner_id = str(user["_id"])
+
+            result = self.collection.find({"owner_id": owner_id})
+            documents = await result.to_list(length=None)
+
+            data = [
+                {
+                    "document_id": str(doc["_id"]),
+                    "file_name": doc["file_name"],
+                    "mime_type": doc["mime_type"],
+                    "size": doc.get("size"),
+                    "is_public": doc.get("is_public", False),
+                    "status": doc.get("status"),
+                    "created_at": doc.get("created_at"),
+                    "updated_at": doc.get("updated_at"),
+                }
+                for doc in documents
+            ]
+
+            return response(
+                message="Documents fetched successfully",
+                data=data,
+            )
+
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={"status": False, "message": "Something went wrong while fetching documents"},
+            )
 
 document_service = DocumentService()
