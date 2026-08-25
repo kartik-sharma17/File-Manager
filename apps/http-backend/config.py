@@ -15,7 +15,6 @@ class Settings:
     EMAIL_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("EMAIL_TOKEN_EXPIRE_MINUTES"))
 
     R2_PUBLIC_BASE_URL: str = os.getenv("R2_PUBLIC_BASE_URL")
-    R2_ACCOUNT_ID: str = os.getenv("R2_ACCOUNT_ID")
     R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID")
     R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY")
     R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME")
