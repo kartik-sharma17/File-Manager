@@ -6,7 +6,7 @@ from v1.dependencies import verifyUserDependency
 documentRouter = APIRouter(prefix="/document", tags=["document"])
 
 
-@documentRouter.post("/create")
+@documentRouter.post("/upload")
 async def createDocument(documentData: UploadRequestSchema, user=Depends(verifyUserDependency)):
     return await document_service.UploadDocument(user, documentData)
 

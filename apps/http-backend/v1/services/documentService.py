@@ -375,8 +375,8 @@ class DocumentService:
                     "size": doc.get("size"),
                     "is_public": doc.get("is_public", False),
                     "status": doc.get("status"),
-                    "created_at": doc.get("created_at"),
-                    "updated_at": doc.get("updated_at"),
+                    "created_at": str(doc.get("created_at")),
+                    "updated_at": str(doc.get("updated_at")),
                 }
                 for doc in documents
             ]
