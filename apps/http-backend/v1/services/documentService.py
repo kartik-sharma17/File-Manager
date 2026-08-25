@@ -5,16 +5,14 @@ from v1.db.connectDB import getDB
 from v1.schema import UploadRequestSchema, UploadRequestResponseSchema
 from v1.utility import log, GeneratePresignedUploadUrl
 from v1.models import Document
-from config import settings
 
 
 class DocumentService:
     @property
-    async def collection(self):
+    def collection(self):
         return getDB()["Document"]
 
-
-    async def UploadDocument(self, user: dict, documentData:UploadRequestSchema):
+    async def UploadDocument(self, user: dict, documentData: UploadRequestSchema):
         try:
             owner_id = str(user["_id"])
 
@@ -43,12 +41,10 @@ class DocumentService:
                     },
                 )
 
-            object_url = f"{settings.R2_PUBLIC_BASE_URL}/{r2_key}"
-
             new_document = Document(
                 owner_id=owner_id,
                 file_name=documentData.file_name,
-                url=object_url,
+                url=r2_key,
                 mime_type=documentData.mime_type,
                 size=documentData.size,
                 is_public=documentData.is_public,
@@ -59,7 +55,9 @@ class DocumentService:
                 updated_at=None,
             )
 
-            result = await self.collection.insert_one(new_document.dict(by_alias=True, exclude={"id"}))
+            result = await self.collection.insert_one(
+                new_document.dict(by_alias=True, exclude={"id"})
+            )
 
             return UploadRequestResponseSchema(
                 document_id=str(result.inserted_id),
@@ -79,3 +77,6 @@ class DocumentService:
                     "message": "Something went wrong while uploading document, please try again",
                 },
             )
+
+
+document_service = DocumentService()
