@@ -38,3 +38,36 @@ async def GeneratePresignedUploadUrl(key: str, content_type: str, expires_in: in
     except Exception as e:
         log.info(f"this is a issue {str(e)}")
         return None
+
+
+async def GeneratePresignedDownloadUrl(key: str, expires_in: int = 900):
+    try:
+        client = get_storage_client()
+        download_url = client.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": settings.B2_BUCKET_NAME,
+                "Key": key,
+            },
+            ExpiresIn=expires_in,
+        )
+        return download_url
+    except ClientError as e:
+        log.info(f"B2 presigned download URL generation failed: {str(e)}")
+        return None
+    except Exception as e:
+        log.info(f"this is a issue {str(e)}")
+        return None
+
+
+async def VerifyObjectExists(key: str):
+    try:
+        client = get_storage_client()
+        response = client.head_object(Bucket=settings.B2_BUCKET_NAME, Key=key)
+        return response.get("ContentLength")
+    except ClientError as e:
+        log.info(f"B2 object verification failed: {str(e)}")
+        return None
+    except Exception as e:
+        log.info(f"this is a issue {str(e)}")
+        return None
