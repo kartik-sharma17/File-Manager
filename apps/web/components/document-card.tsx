@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { DocumentActionsMenu } from "@/components/document-actions-menu";
-import { DocumentListItem } from "@/services/documentService";
+import { DocumentListItem } from "@/redux/service/documentService";
 import { formatBytes, formatDate } from "@/lib/utils";
 import { FileText, FileImage, FileSpreadsheet, File as FileIcon } from "lucide-react";
 

@@ -87,7 +87,11 @@ export function ShareLinkDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Expires after</Label>
-            <Select value={expiryMinutes} onValueChange={setExpiryMinutes} disabled={isLoading}>
+            <Select value={expiryMinutes} onValueChange={(value) => {
+    if (value !== null) {
+      setExpiryMinutes(value);
+    }
+  }} disabled={isLoading}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
