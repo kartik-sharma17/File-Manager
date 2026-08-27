@@ -48,7 +48,7 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (err) {
       const message =
-        (err as { data?: { message?: string } })?.data?.message ??
+        (err as { data?: { detail?: { message?: string } }  })?.data?.detail?.message ??
         "Invalid email or password";
       toast.error(message);
     }

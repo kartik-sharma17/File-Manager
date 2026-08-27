@@ -16,7 +16,7 @@ class Auth:
                 if existUser.get("is_verified"):
                     raise HTTPException(
                         status_code=409,
-                        details={
+                        detail={
                             "message":"User is Already Exist with this Email id",
                             "status":False,
                         }
@@ -46,7 +46,7 @@ class Auth:
                     else:
                         raise HTTPException(
                             status_code=500,
-                            details={
+                            detail={
                                 "status":False,
                                 "message":"Something went wrong while sending email, please try again",
                             }
@@ -73,7 +73,7 @@ class Auth:
             else:
                 raise HTTPException(
                     status_code=500,
-                    details={
+                    detail={
                         "status":False,
                         "message":"Something went wrong while sending email, please try again",
                     }
@@ -126,7 +126,7 @@ class Auth:
             else:
                 raise HTTPException(
                 status_code=500,
-                details={
+                detail={
                         "status":False,
                         "message":"Something went wrong while sending email, please try again",
                     }
@@ -137,7 +137,7 @@ class Auth:
             log.info(f"this is a issue {str(e)}")
             return HTTPException(
                 status_code=500,
-                details={
+                detail={
                 "message":"Something went wrong, please try again",
                 "status":False
                 }

@@ -88,8 +88,8 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       onOpenChange(false);
     } catch (err) {
       setStage("error");
-      const message =
-        (err as { data?: {detail?: { message?: string } }  })?.data?.detail?.message ??
+            const message =
+        (err as { data?: { detail?: { message?: string } }  })?.data?.detail?.message ??
         "Invalid email or password";
       toast.error(message);
     }

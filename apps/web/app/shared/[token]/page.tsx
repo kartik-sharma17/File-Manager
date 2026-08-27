@@ -80,7 +80,7 @@ export default function SharedDocumentPage() {
                   Your download should start automatically.
                 </p>
                 <Button className="mt-6 w-full gap-2">
-                  <a href={downloadUrl}>
+                  <a className="flex gap-2 items-center" href={downloadUrl}>
                     <Download className="h-4 w-4" />
                     Click here if it doesn&apos;t
                   </a>

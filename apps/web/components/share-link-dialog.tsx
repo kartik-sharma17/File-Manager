@@ -53,9 +53,12 @@ export function ShareLinkDialog({
       }).unwrap();
 
       const origin = typeof window !== "undefined" ? window.location.origin : "";
-      setShareUrl(`${origin}/share/${res.data.share_token}`);
-    } catch {
-      toast.error("Couldn't generate a share link");
+      setShareUrl(`${origin}/shared/${res.data.share_token}`);
+    } catch (err){
+            const message =
+        (err as { data?: { detail?: { message?: string } }  })?.data?.detail?.message ??
+        "Invalid email or password";
+      toast.error(message);
     }
   };
 

@@ -52,7 +52,7 @@ export default function SignupPage() {
       }, 3000);
     } catch (err) {
       const message =
-        (err as { data?: {detail?: { message?: string } }  })?.data?.detail?.message ??
+        (err as { data?: { detail?: { message?: string } }  })?.data?.detail?.message ??
         "Invalid email or password";
       toast.error(message);
     }
