@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Cookies from "js-cookie";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,12 +30,21 @@ export default function LoginPage() {
       const res = await login({ email, password }).unwrap();
       const { token, name, email: userEmail, last_login } = res.data;
 
-      localStorage.setItem("access_token", token);
+      // Token goes in a cookie so middleware.ts can verify it on the server
+      // for protected routes.
+      Cookies.set("token", token, {
+        expires: 7,
+        path: "/",
+        sameSite: "lax",
+        secure: window.location.protocol === "https:",
+      });
+
+      // Display-only info, read client-side by the sidebar/profile UI.
       localStorage.setItem("user_name", name);
       localStorage.setItem("user_email", userEmail);
       if (last_login) localStorage.setItem("user_last_login", last_login);
 
-      toast.success("Welcome back");
+      toast.success(res.message);
       router.push("/dashboard");
     } catch (err) {
       const message =

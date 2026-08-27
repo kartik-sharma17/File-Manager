@@ -52,8 +52,8 @@ export default function SignupPage() {
       }, 3000);
     } catch (err) {
       const message =
-        (err as { data?: { message?: string } })?.data?.message ??
-        "Couldn't create your account";
+        (err as { data?: {detail?: { message?: string } }  })?.data?.detail?.message ??
+        "Invalid email or password";
       toast.error(message);
     }
   };

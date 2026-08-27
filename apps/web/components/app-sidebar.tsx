@@ -27,7 +27,7 @@ export function AppSidebar() {
   const { openDialog } = useUploadDialog();
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-border bg-background">
+    <aside className="flex h-full w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-background">
       <div className="px-6 py-6">
         <Link href="/dashboard" className="font-display text-xl tracking-tight">
           VAULT
@@ -80,7 +80,7 @@ export function AppSidebar() {
 
       <Separator />
 
-      <div className="px-4 py-4">
+      <div className="shrink-0 px-4 py-4">
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"

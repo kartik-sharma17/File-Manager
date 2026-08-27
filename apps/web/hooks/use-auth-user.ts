@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import { getInitials } from "@/lib/utils";
 
 export type AuthUser = {
@@ -26,7 +27,7 @@ export function useAuthUser() {
   }, []);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem("access_token");
+    Cookies.remove("token", { path: "/" });
     localStorage.removeItem("user_name");
     localStorage.removeItem("user_email");
     localStorage.removeItem("user_last_login");

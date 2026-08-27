@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import Cookies from "js-cookie";
 
 export const RootApiService = createApi({
   reducerPath: "rootApi",
@@ -6,7 +7,7 @@ export const RootApiService = createApi({
     baseUrl: process.env.NEXT_PUBLIC_BASE_URL,
     prepareHeaders: (headers) => {
       if (typeof window !== "undefined") {
-        const token = localStorage.getItem("access_token");
+        const token = Cookies.get("token");
         if (token) {
           headers.set("Authorization", `Bearer ${token}`);
         }

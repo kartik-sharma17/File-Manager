@@ -47,3 +47,7 @@ async def changeVisibility(
 @documentRouter.get("/all")
 async def getAllDocuments(user=Depends(verifyUserDependency)):
     return await document_service.GetAllDocument(user)
+
+@documentRouter.delete("/delete/{document_id}")
+async def deleteDocument(document_id: str, user=Depends(verifyUserDependency)):
+    return await document_service.DeleteDocument(user, document_id)

@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 
-MAX_FILE_SIZE = 100 * 1024 * 1024
+MAX_FILE_SIZE = 1024 * 1024 * 1024
 
 
 class UploadRequestSchema(BaseModel):

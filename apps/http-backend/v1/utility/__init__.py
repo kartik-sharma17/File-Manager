@@ -4,5 +4,5 @@ from .jwt.emailVerifyToken import GenerateEmailVerifyToken, VerifyEmailToken
 from .mailConfig.verificationMail import SendVerificationEmail
 from .passwordHashing import HashPassword, VerifyPassword
 from .logger import log
-from .r2.b2Storage import GeneratePresignedUploadUrl, GeneratePresignedDownloadUrl, VerifyObjectExists
+from .r2.b2Storage import GeneratePresignedUploadUrl, DeleteObject, GeneratePresignedDownloadUrl, VerifyObjectExists
 from .jwt.shareToken import GenerateShareToken, VerifyShareToken

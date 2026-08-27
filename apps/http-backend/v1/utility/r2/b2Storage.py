@@ -71,3 +71,15 @@ async def VerifyObjectExists(key: str):
     except Exception as e:
         log.info(f"this is a issue {str(e)}")
         return None
+
+async def DeleteObject(key: str):
+    try:
+        client = get_storage_client()
+        client.delete_object(Bucket=settings.B2_BUCKET_NAME, Key=key)
+        return True
+    except ClientError as e:
+        log.info(f"B2 object deletion failed: {str(e)}")
+        return False
+    except Exception as e:
+        log.info(f"this is a issue {str(e)}")
+        return False

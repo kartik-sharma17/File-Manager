@@ -11,7 +11,8 @@ from v1.utility import (
     VerifyObjectExists,
     response,
     GenerateShareToken,
-    VerifyShareToken
+    VerifyShareToken,
+    DeleteObject
 )
 from v1.models import Document
 
@@ -391,6 +392,51 @@ class DocumentService:
             raise HTTPException(
                 status_code=500,
                 detail={"status": False, "message": "Something went wrong while fetching documents"},
+            )
+
+    async def DeleteDocument(self, user: dict, document_id: str):
+        try:
+            owner_id = str(user["_id"])
+
+            document = await self.collection.find_one({"_id": ObjectId(document_id)})
+
+            if not document:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"status": False, "message": "Document not found"},
+                )
+
+            if document["owner_id"] != owner_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail={"status": False, "message": "You do not have access to this document"},
+                )
+
+            deleted_from_storage = await DeleteObject(key=document["url"])
+
+            if not deleted_from_storage:
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "status": False,
+                        "message": "Something went wrong while deleting the file from storage, please try again",
+                    },
+                )
+
+            await self.collection.delete_one({"_id": ObjectId(document_id)})
+
+            return response(
+                message="Document deleted successfully",
+                data={"document_id": document_id},
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={"status": False, "message": "Something went wrong while deleting document"},
             )
 
 document_service = DocumentService()

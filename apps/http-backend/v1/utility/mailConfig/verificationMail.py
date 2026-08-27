@@ -15,9 +15,9 @@ async def SendVerificationEmail(email: str, name: str, token: str):
             html_content = html_template.render(name=name, verify_link=verify_link)
 
         resend.Emails.send({
-            "from": f"{settings.MAIL_FROM_NAME} <onboarding@resend.dev>",
+            "from": f"{settings.MAIL_FROM_NAME} <vault@clarixai.in>",
             "to": [email],
-            "subject": "Verify Your File Manager Account",
+            "subject": "Verify Your Vault Account",
             "html": html_content,
         })
 
