@@ -26,6 +26,7 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [redirecting, setRedirecting] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -36,15 +37,19 @@ export default function SignupPage() {
     }
 
     try {
-      await register({
+      const res = await register({
         full_name: fullName,
         email,
         password,
         phone: phone || undefined,
       }).unwrap();
 
-      toast.success("Account created. Check your email to verify it.");
-      router.push("/login");
+      toast.success(res.message);
+      setRedirecting(true);
+
+      setTimeout(() => {
+        router.push(`/email-sent?email=${encodeURIComponent(email)}`);
+      }, 3000);
     } catch (err) {
       const message =
         (err as { data?: { message?: string } })?.data?.message ??
@@ -80,6 +85,7 @@ export default function SignupPage() {
                   onChange={(e) => setFullName(e.target.value)}
                   required
                   autoComplete="name"
+                  disabled={redirecting}
                 />
               </div>
               <div className="space-y-2">
@@ -92,6 +98,7 @@ export default function SignupPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
+                  disabled={redirecting}
                 />
               </div>
               <div className="space-y-2">
@@ -103,6 +110,7 @@ export default function SignupPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"
+                  disabled={redirecting}
                 />
               </div>
               <div className="space-y-2">
@@ -116,6 +124,7 @@ export default function SignupPage() {
                   required
                   minLength={8}
                   autoComplete="new-password"
+                  disabled={redirecting}
                 />
               </div>
               <div className="space-y-2">
@@ -129,11 +138,14 @@ export default function SignupPage() {
                   required
                   minLength={8}
                   autoComplete="new-password"
+                  disabled={redirecting}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign up
+              <Button type="submit" className="w-full" disabled={isLoading || redirecting}>
+                {(isLoading || redirecting) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {redirecting ? "Redirecting…" : "Sign up"}
               </Button>
             </form>
 
