@@ -3,58 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify Your Account</title>
+  <title>Verify your Vault account</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    @media only screen and (max-width: 480px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 24px !important; padding-right: 24px !important; }
+    }
+  </style>
 </head>
-<body style="margin:0; padding:0; background-color:#f4f4f7; font-family:Arial, Helvetica, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7; padding:40px 0;">
+<body style="margin:0; padding:0; background-color:#f4f4f5; font-family:'Poppins', Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5; padding:48px 0;">
     <tr>
       <td align="center">
-        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <table role="presentation" width="480" class="container" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border:1px solid #e4e4e7; border-radius:8px; overflow:hidden;">
 
           <!-- Header -->
           <tr>
-            <td style="background-color:#111827; padding:24px 32px;">
-              <span style="color:#ffffff; font-size:18px; font-weight:600;">File Manager</span>
+            <td class="px" style="background-color:#0a0a0a; padding:28px 32px;">
+              <span style="color:#ffffff; font-size:20px; font-weight:700; letter-spacing:2px; text-transform:uppercase; font-family:Arial, Helvetica, sans-serif;">
+                VAULT
+              </span>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
-            <td style="padding:32px;">
-              <h1 style="margin:0 0 16px; font-size:20px; color:#111827;">Hi {{ name }},</h1>
-              <p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#4b5563;">
-                Thanks for signing up. Please confirm your email address to activate your account.
+            <td class="px" style="padding:36px 32px 32px;">
+              <p style="margin:0 0 4px; font-size:12px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#71717a;">
+                Confirm your email
+              </p>
+              <h1 style="margin:0 0 18px; font-size:22px; line-height:1.3; color:#0a0a0a;">
+                Hi {{ name }}, let's activate your vault.
+              </h1>
+              <p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#3f3f46;">
+                You're one step away from storing, organizing, and sharing your
+                documents. Confirm your email address to activate your account.
               </p>
 
-              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0;">
                 <tr>
-                  <td style="border-radius:6px; background-color:#111827;">
+                  <td style="border-radius:6px; background-color:#0a0a0a;">
                     <a href="{{ verify_link }}"
-                       style="display:inline-block; padding:12px 28px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:6px;">
-                      Verify Account
+                       style="display:inline-block; padding:13px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:6px;">
+                      Verify account
                     </a>
                   </td>
                 </tr>
               </table>
 
-              <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#6b7280;">
+              <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#71717a;">
                 If the button above doesn't work, copy and paste this link into your browser:
               </p>
               <p style="margin:0 0 24px; font-size:13px; word-break:break-all;">
-                <a href="{{ verify_link }}" style="color:#2563eb;">{{ verify_link }}</a>
+                <a href="{{ verify_link }}" style="color:#0a0a0a; text-decoration:underline;">{{ verify_link }}</a>
               </p>
 
-              <p style="margin:0; font-size:13px; line-height:1.6; color:#9ca3af;">
-                This link will expire soon. If you didn't create this account, you can safely ignore this email.
+              <div style="height:1px; background-color:#e4e4e7; margin:24px 0;"></div>
+
+              <p style="margin:0; font-size:13px; line-height:1.6; color:#a1a1aa;">
+                This link will expire soon for your security. If you didn't create
+                a Vault account, you can safely ignore this email.
               </p>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="padding:20px 32px; background-color:#f9fafb; border-top:1px solid #e5e7eb;">
-              <p style="margin:0; font-size:12px; color:#9ca3af;">
-                &copy; File Manager. All rights reserved.
+            <td class="px" style="padding:20px 32px; background-color:#fafafa; border-top:1px solid #e4e4e7;">
+              <p style="margin:0; font-size:12px; color:#a1a1aa;">
+                &copy; Vault. All rights reserved.
               </p>
             </td>
           </tr>
