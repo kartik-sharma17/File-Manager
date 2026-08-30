@@ -11,12 +11,20 @@ class UploadRequestSchema(BaseModel):
     size: int = Field(..., gt=0, le=MAX_FILE_SIZE)
     is_public: bool = False
     folder_id: Optional[str] = None 
+    thumbnail: Optional[str] = None
 
     @field_validator("file_name")
     @classmethod
     def sanitize_file_name(cls, v: str) -> str:
         if "/" in v or "\\" in v or ".." in v:
             raise ValueError("Invalid file name")
+        return v
+
+    @field_validator("thumbnail")
+    @classmethod
+    def validate_thumbnail_size(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 200_000:  # ~150KB decoded
+            raise ValueError("Thumbnail payload too large")
         return v
 
 
@@ -41,6 +49,7 @@ class GetDocumentResponseSchema(BaseModel):
     url: Optional[str] = None     
     share_token: Optional[str] = None
     created_at: str
+    thumbnail_url: Optional[str] = None
 
 class CreateFolderSchema(BaseModel):
     name: str

@@ -12,7 +12,9 @@ from v1.utility import (
     response,
     GenerateShareToken,
     VerifyShareToken,
-    DeleteObject
+    DeleteObject,
+    UploadThumbnail,
+    AttachThumbnailUrls,
 )
 from v1.models import Document
 
@@ -51,6 +53,13 @@ class DocumentService:
                     },
                 )
 
+            thumbnail_key = None
+            if documentData.thumbnail:
+                thumbnail_key = f"{owner_id}/thumbnails/{uuid.uuid4()}.jpg"
+                uploaded = await UploadThumbnail(thumbnail_key, documentData.thumbnail)
+                if not uploaded:
+                    thumbnail_key = None 
+
             new_document = Document(
                 owner_id=owner_id,
                 file_name=documentData.file_name,
@@ -61,6 +70,7 @@ class DocumentService:
                 share_token=None,
                 status="uploading",
                 folder_id=documentData.folder_id if documentData.folder_id else None,
+                thumbnail_key=thumbnail_key,
                 checksum=None,
                 created_at=datetime.now(timezone.utc),
                 updated_at=None,
@@ -369,25 +379,12 @@ class DocumentService:
             result = self.collection.find({"owner_id": owner_id})
             documents = await result.to_list(length=None)
 
-            data = [
-                {
-                    "document_id": str(doc["_id"]),
-                    "file_name": doc["file_name"],
-                    "mime_type": doc["mime_type"],
-                    "size": doc.get("size"),
-                    "is_public": doc.get("is_public", False),
-                    "status": doc.get("status"),
-                    "created_at": str(doc.get("created_at")),
-                    "updated_at": str(doc.get("updated_at")),
-                }
-                for doc in documents
-            ]
+            data = await AttachThumbnailUrls(documents)
 
             return response(
                 message="Documents fetched successfully",
                 data=data,
             )
-
         except Exception as e:
             log.info(f"this is a issue {str(e)}")
             raise HTTPException(
@@ -423,6 +420,9 @@ class DocumentService:
                         "message": "Something went wrong while deleting the file from storage, please try again",
                     },
                 )
+
+            if document.get("thumbnail_key"):
+                await DeleteObject(key=document["thumbnail_key"])
 
             await self.collection.delete_one({"_id": ObjectId(document_id)})
 
@@ -470,5 +470,6 @@ class DocumentService:
         except Exception as e:
             log.info(f"this is a issue {str(e)}")
             raise HTTPException(status_code=500, detail={"status": False, "message": "Something went wrong while moving document"})
+
 
 document_service = DocumentService()

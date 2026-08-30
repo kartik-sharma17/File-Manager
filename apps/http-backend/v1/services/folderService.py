@@ -2,7 +2,7 @@ from bson import ObjectId
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from v1.db.connectDB import getDB
-from v1.utility import log, response, DeleteObject
+from v1.utility import log, response, DeleteObject, AttachThumbnailUrls
 from v1.models import Folder
 
 
@@ -98,6 +98,8 @@ class FolderService:
 
             for doc in documents:
                 await DeleteObject(key=doc["url"])
+                if doc.get("thumbnail_key"):
+                    await DeleteObject(key=doc["thumbnail_key"])
 
             await self.document_collection.delete_many({"folder_id": {"$in": all_folder_ids}})
             await self.collection.delete_many({"_id": {"$in": [ObjectId(fid) for fid in all_folder_ids]}})
@@ -180,6 +182,8 @@ class FolderService:
             subfolders = await self.collection.find({"owner_id": owner_id, "parent_id": folder_id}).to_list(length=None)
             documents = await self.document_collection.find({"owner_id": owner_id, "folder_id": folder_id}).to_list(length=None)
 
+            documents_data = await AttachThumbnailUrls(documents)
+
             return response(
                 message="Folder contents fetched successfully",
                 data={
@@ -187,20 +191,7 @@ class FolderService:
                         {"folder_id": str(f["_id"]), "name": f["name"], "parent_id": f.get("parent_id")}
                         for f in subfolders
                     ],
-                    "documents": [
-                        {
-                            "document_id": str(d["_id"]),
-                            "file_name": d["file_name"],
-                            "mime_type": d["mime_type"],
-                            "size": d.get("size"),
-                            "is_public": d.get("is_public", False),
-                            "status": d.get("status"),
-                            "folder_id": d.get("folder_id"),
-                            "created_at": str(d.get("created_at")),
-                            "updated_at": str(d.get("updated_at")),
-                        }
-                        for d in documents
-                    ],
+                    "documents": documents_data,
                 },
             )
         except HTTPException:

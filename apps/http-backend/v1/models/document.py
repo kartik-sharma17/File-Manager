@@ -12,6 +12,7 @@ class Document(BaseModel):
     size: int
     is_public: bool = False
     share_token: Optional[str] = None 
+    thumbnail_key: Optional[str] = None
     status: str = "uploading"          
     folder_id: Optional[str] = None 
     checksum: Optional[str] = None     

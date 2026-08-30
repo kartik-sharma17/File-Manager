@@ -7,6 +7,7 @@ export type UploadRequestPayload = {
   size: number;
   is_public: boolean;
   folder_id?: string | null;
+  thumbnail?: string | null;
 };
 
 export type UploadRequestResponseData = {
@@ -47,6 +48,7 @@ export type DocumentListItem = {
   is_public: boolean;
   status: DocumentStatus;
   folder_id: string | null;
+  thumbnail_url?: string | null;
   created_at: string;
   updated_at: string | null;
 };

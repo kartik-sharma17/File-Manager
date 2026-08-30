@@ -19,6 +19,7 @@ import { useGetAllFoldersQuery } from "@/redux/service/folderService";
 import { uploadFileToPresignedUrl } from "@/lib/upload-file";
 import { formatBytes } from "@/lib/utils";
 import { FileIcon, UploadCloud, X, CheckCircle2, XCircle, Folder as FolderIcon } from "lucide-react";
+import { generateThumbnail } from "@/lib/generate-thumbnail";
 
 type UploadDialogProps = {
   open: boolean;
@@ -34,6 +35,7 @@ type UploadItem = {
   progress: number;
   errorMessage?: string;
   abort?: () => void;
+  previewUrl?: string; // local blob URL, images only
 };
 
 export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
@@ -60,17 +62,27 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   };
 
+  const removeItem = (id: string) => {
+    setItems((prev) => {
+      const target = prev.find((i) => i.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((i) => i.id !== id);
+    });
+  };
+
   const uploadOne = async (item: UploadItem) => {
     try {
       updateItem(item.id, { status: "requesting" });
 
-      // folder_id captured at click time — the folder selected when the file was added
+      const thumbnail = await generateThumbnail(item.file);
+
       const requestRes = await createUploadRequest({
         file_name: item.file.name,
         mime_type: item.file.type || "application/octet-stream",
         size: item.file.size,
         is_public: isPublic,
         folder_id: folderId,
+        thumbnail,
       }).unwrap();
 
       const { document_id, upload_url } = requestRes.data;
@@ -110,6 +122,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       file,
       status: "requesting",
       progress: 0,
+      previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
     }));
 
     setItems((prev) => [...prev, ...newItems]);
@@ -119,6 +132,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 
   const handleClose = () => {
     if (isBusy) toast.info("Uploads keep running in the background");
+    items.forEach((i) => i.previewUrl && URL.revokeObjectURL(i.previewUrl));
     setItems([]);
     setIsPublic(false);
     onOpenChange(false);
@@ -158,11 +172,23 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
           </div>
 
           {items.length > 0 && (
-            <div className="max-h-64 space-y-2 overflow-y-auto">
+            <div className="max-h-72 space-y-2 overflow-y-auto">
               {items.map((item) => (
                 <div key={item.id} className="rounded-md border border-border p-3">
                   <div className="flex items-center gap-3">
-                    <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                    {item.previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.previewUrl}
+                        alt={item.file.name}
+                        className="h-16 w-16 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-secondary">
+                        <FileIcon className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+                      </div>
+                    )}
+
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{item.file.name}</p>
                       <p className="text-xs text-muted-foreground">{formatBytes(item.file.size)}</p>
@@ -176,10 +202,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
                       </button>
                     )}
                     {["cancelled", "error", "done"].includes(item.status) && (
-                      <button
-                        type="button"
-                        onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
-                      >
+                      <button type="button" onClick={() => removeItem(item.id)}>
                         <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                       </button>
                     )}
