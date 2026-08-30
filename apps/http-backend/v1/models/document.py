@@ -16,6 +16,8 @@ class Document(BaseModel):
     status: str = "uploading"          
     folder_id: Optional[str] = None 
     checksum: Optional[str] = None     
+    is_deleted: bool = False        
+    deleted_at: Optional[datetime] = None  
     created_at: datetime
     updated_at: Optional[datetime] = None
 

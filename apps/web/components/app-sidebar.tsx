@@ -86,8 +86,10 @@ export function AppSidebar() {
   const [rootName, setRootName] = useState("");
   const [createFolder, { isLoading: isCreatingRoot }] = useCreateFolderMutation();
 
+  const isTrashActive = pathname === "/trash";
+
   const selectFolder = (folderId: string | null) => {
-    router.push(folderId ? `${pathname}?folder=${folderId}` : pathname);
+    router.push(folderId ? `${pathname.includes("/trash")? pathname.replace("/trash",""):pathname }?folder=${folderId}` : "/dashboard");
   };
 
   const handleCreateRoot = async () => {
@@ -148,7 +150,7 @@ export function AppSidebar() {
         <FolderRow
           node={generalNode}
           depth={0}
-          isSelected={!selectedFolderId}
+          isSelected={!isTrashActive && !selectedFolderId}
           isGeneral
           onSelect={() => selectFolder(null)}
         />
@@ -158,7 +160,7 @@ export function AppSidebar() {
             key={node.folder_id}
             node={node}
             depth={0}
-            selectedFolderId={selectedFolderId}
+            selectedFolderId={isTrashActive ? undefined : selectedFolderId}
             onSelect={selectFolder}
           />
         ))}
@@ -179,6 +181,21 @@ export function AppSidebar() {
             />
           </div>
         )}
+
+        <Separator className="my-3" />
+
+        <Link
+          href="/dashboard/trash"
+          className={cn(
+            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            isTrashActive
+              ? "bg-foreground text-background"
+              : "text-foreground/80 hover:bg-secondary"
+          )}
+        >
+          <Trash2 className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+          Trash
+        </Link>
       </nav>
 
       <Separator />
@@ -297,19 +314,19 @@ function FolderNode({
 }: {
   node: TreeNode;
   depth: number;
-  selectedFolderId: string | null;
+  selectedFolderId: string | null | undefined;
   onSelect: (folderId: string | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameReady, setRenameReady] = useState(false);
   const [isCreatingChild, setIsCreatingChild] = useState(false);
-  const [createReady, setCreateReady] = useState(false); // NEW
+  const [createReady, setCreateReady] = useState(false);
   const [nameInput, setNameInput] = useState(node.name);
   const [childName, setChildName] = useState("");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
-  const createInputRef = useRef<HTMLInputElement>(null); // NEW
+  const createInputRef = useRef<HTMLInputElement>(null);
 
   const [renameFolder, { isLoading: isRenamingMutation }] = useRenameFolderMutation();
   const [deleteFolder, { isLoading: isDeleting }] = useDeleteFolderMutation();
@@ -331,7 +348,6 @@ function FolderNode({
     }
   }, [isRenaming]);
 
-  // NEW — same focus-steal protection, for the create-subfolder input
   useEffect(() => {
     if (isCreatingChild) {
       setCreateReady(false);
@@ -377,7 +393,7 @@ function FolderNode({
     }
     try {
       await createFolder({ name: trimmed, parent_id: node.folder_id }).unwrap();
-      setExpanded(true); // reveal the new subfolder once created
+      setExpanded(true);
     } catch {
       toast.error("Couldn't create folder");
     } finally {
@@ -421,7 +437,7 @@ function FolderNode({
           onRename={() => setIsRenaming(true)}
           onNewSubfolder={() => {
             setExpanded(true);
-            setIsCreatingChild(true); // FIX — this was never being triggered before
+            setIsCreatingChild(true);
           }}
           onDelete={() => setConfirmDeleteOpen(true)}
         />
@@ -429,7 +445,6 @@ function FolderNode({
 
       {expanded && (
         <div>
-          {/* NEW — the actual missing input, rendered as the first "child" row */}
           {isCreatingChild && (
             <div className="flex items-center gap-1 py-1" style={{ paddingLeft: 24 + (depth + 1) * 16 }}>
               <Input

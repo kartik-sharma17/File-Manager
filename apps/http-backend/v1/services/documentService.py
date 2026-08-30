@@ -58,7 +58,7 @@ class DocumentService:
                 thumbnail_key = f"{owner_id}/thumbnails/{uuid.uuid4()}.jpg"
                 uploaded = await UploadThumbnail(thumbnail_key, documentData.thumbnail)
                 if not uploaded:
-                    thumbnail_key = None 
+                    thumbnail_key = None
 
             new_document = Document(
                 owner_id=owner_id,
@@ -71,6 +71,7 @@ class DocumentService:
                 status="uploading",
                 folder_id=documentData.folder_id if documentData.folder_id else None,
                 thumbnail_key=thumbnail_key,
+                deleted_at=None,
                 checksum=None,
                 created_at=datetime.now(timezone.utc),
                 updated_at=None,
@@ -376,7 +377,7 @@ class DocumentService:
         try:
             owner_id = str(user["_id"])
 
-            result = self.collection.find({"owner_id": owner_id})
+            result = self.collection.find({"owner_id": owner_id, "deleted_at": None})
             documents = await result.to_list(length=None)
 
             data = await AttachThumbnailUrls(documents)
@@ -385,6 +386,7 @@ class DocumentService:
                 message="Documents fetched successfully",
                 data=data,
             )
+
         except Exception as e:
             log.info(f"this is a issue {str(e)}")
             raise HTTPException(
@@ -393,6 +395,7 @@ class DocumentService:
             )
 
     async def DeleteDocument(self, user: dict, document_id: str):
+        """Soft delete — moves the document to trash. Storage is untouched."""
         try:
             owner_id = str(user["_id"])
 
@@ -408,6 +411,110 @@ class DocumentService:
                 raise HTTPException(
                     status_code=403,
                     detail={"status": False, "message": "You do not have access to this document"},
+                )
+
+            if document.get("deleted_at"):
+                raise HTTPException(
+                    status_code=400,
+                    detail={"status": False, "message": "Document is already in trash"},
+                )
+
+            await self.collection.update_one(
+                {"_id": ObjectId(document_id)},
+                {"$set": {"deleted_at": datetime.now(timezone.utc)}},
+            )
+
+            return response(
+                message="Document moved to trash",
+                data={"document_id": document_id},
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={"status": False, "message": "Something went wrong while deleting document"},
+            )
+
+    async def RestoreDocument(self, user: dict, document_id: str):
+        try:
+            owner_id = str(user["_id"])
+
+            document = await self.collection.find_one({"_id": ObjectId(document_id)})
+
+            if not document:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"status": False, "message": "Document not found"},
+                )
+
+            if document["owner_id"] != owner_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail={"status": False, "message": "You do not have access to this document"},
+                )
+
+            if not document.get("deleted_at"):
+                raise HTTPException(
+                    status_code=400,
+                    detail={"status": False, "message": "Document is not in trash"},
+                )
+
+            # If the document's folder was itself deleted since, fall back to General
+            # rather than restoring into a folder that no longer exists.
+            folder_id = document.get("folder_id")
+            if folder_id:
+                folder = await getDB()["Folder"].find_one({"_id": ObjectId(folder_id)})
+                if not folder:
+                    folder_id = None
+
+            await self.collection.update_one(
+                {"_id": ObjectId(document_id)},
+                {"$set": {"deleted_at": None, "folder_id": folder_id, "updated_at": datetime.now(timezone.utc)}},
+            )
+
+            return response(
+                message="Document restored",
+                data={"document_id": document_id},
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={"status": False, "message": "Something went wrong while restoring document"},
+            )
+
+    async def PermanentlyDeleteDocument(self, user: dict, document_id: str):
+        """Hard delete — only allowed from trash. Removes from storage and DB."""
+        try:
+            owner_id = str(user["_id"])
+
+            document = await self.collection.find_one({"_id": ObjectId(document_id)})
+
+            if not document:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"status": False, "message": "Document not found"},
+                )
+
+            if document["owner_id"] != owner_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail={"status": False, "message": "You do not have access to this document"},
+                )
+
+            if not document.get("deleted_at"):
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "status": False,
+                        "message": "Document must be in trash before it can be permanently deleted",
+                    },
                 )
 
             deleted_from_storage = await DeleteObject(key=document["url"])
@@ -427,7 +534,7 @@ class DocumentService:
             await self.collection.delete_one({"_id": ObjectId(document_id)})
 
             return response(
-                message="Document deleted successfully",
+                message="Document permanently deleted",
                 data={"document_id": document_id},
             )
 
@@ -437,7 +544,31 @@ class DocumentService:
             log.info(f"this is a issue {str(e)}")
             raise HTTPException(
                 status_code=500,
-                detail={"status": False, "message": "Something went wrong while deleting document"},
+                detail={"status": False, "message": "Something went wrong while permanently deleting document"},
+            )
+
+    async def GetTrash(self, user: dict):
+        try:
+            owner_id = str(user["_id"])
+
+            result = self.collection.find({"owner_id": owner_id, "deleted_at": {"$ne": None}})
+            documents = await result.to_list(length=None)
+
+            data = await AttachThumbnailUrls(documents)
+            deleted_at_map = {str(d["_id"]): str(d.get("deleted_at")) for d in documents}
+            for item in data:
+                item["deleted_at"] = deleted_at_map.get(item["document_id"])
+
+            return response(
+                message="Trash fetched successfully",
+                data=data,
+            )
+
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail={"status": False, "message": "Something went wrong while fetching trash"},
             )
 
     async def MoveDocument(self, user: dict, document_id: str, folder_id: str | None):
@@ -451,6 +582,9 @@ class DocumentService:
 
             if document["owner_id"] != owner_id:
                 raise HTTPException(status_code=403, detail={"status": False, "message": "You do not have access to this document"})
+
+            if document.get("deleted_at"):
+                raise HTTPException(status_code=400, detail={"status": False, "message": "Cannot move a document that is in trash"})
 
             if folder_id:
                 folder = await getDB()["Folder"].find_one({"_id": ObjectId(folder_id)})

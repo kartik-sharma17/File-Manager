@@ -49,6 +49,7 @@ export type DocumentListItem = {
   status: DocumentStatus;
   folder_id: string | null;
   thumbnail_url?: string | null;
+  deleted_at?: string | null; 
   created_at: string;
   updated_at: string | null;
 };
@@ -136,6 +137,29 @@ export const documentService = RootApiService.injectEndpoints({
       }),
       invalidatesTags: ["Document", "Folder"],
     }),
+    restoreDocument: build.mutation<ApiResponse<{ document_id: string }>, string>({
+      query: (documentId) => ({
+        url: `/document/restore/${documentId}`,
+        method: "PATCH",
+      }),
+      invalidatesTags: ["Document"],
+    }),
+
+    permanentlyDeleteDocument: build.mutation<ApiResponse<{ document_id: string }>, string>({
+      query: (documentId) => ({
+        url: `/document/permanent/${documentId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Document"],
+    }),
+
+    getTrash: build.query<ApiResponse<DocumentListItem[]>, void>({
+      query: () => ({
+        url: "/document/trash",
+        method: "GET",
+      }),
+      providesTags: ["Document"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -149,5 +173,8 @@ export const {
   useChangeVisibilityMutation,
   useGetAllDocumentsQuery,
   useDeleteDocumentMutation,
-  useMoveDocumentMutation
+  useMoveDocumentMutation,
+  useRestoreDocumentMutation,      
+  usePermanentlyDeleteDocumentMutation,
+  useGetTrashQuery,  
 } = documentService;

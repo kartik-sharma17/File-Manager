@@ -55,3 +55,17 @@ async def deleteDocument(document_id: str, user=Depends(verifyUserDependency)):
 @documentRouter.patch("/move/{document_id}")
 async def moveDocument(document_id: str, documentData: MoveDocumentSchema, user=Depends(verifyUserDependency)):
     return await document_service.MoveDocument(user, document_id, documentData.folder_id)
+
+@documentRouter.patch("/restore/{document_id}")
+async def restoreDocument(document_id: str, user=Depends(verifyUserDependency)):
+    return await document_service.RestoreDocument(user, document_id)
+
+
+@documentRouter.delete("/permanent/{document_id}")
+async def permanentlyDeleteDocument(document_id: str, user=Depends(verifyUserDependency)):
+    return await document_service.PermanentlyDeleteDocument(user, document_id)
+
+
+@documentRouter.get("/trash")
+async def getTrash(user=Depends(verifyUserDependency)):
+    return await document_service.GetTrash(user)

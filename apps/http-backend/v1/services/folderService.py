@@ -180,7 +180,9 @@ class FolderService:
                     raise HTTPException(status_code=403, detail={"status": False, "message": "You do not have access to this folder"})
 
             subfolders = await self.collection.find({"owner_id": owner_id, "parent_id": folder_id}).to_list(length=None)
-            documents = await self.document_collection.find({"owner_id": owner_id, "folder_id": folder_id}).to_list(length=None)
+            documents = await self.document_collection.find(
+    {"owner_id": owner_id, "folder_id": folder_id, "deleted_at": None}
+).to_list(length=None)
 
             documents_data = await AttachThumbnailUrls(documents)
 
