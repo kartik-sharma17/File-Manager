@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useGetFolderContentsQuery } from "@/redux/service/folderService";
 import { useGetAllDocumentsQuery } from "@/redux/service/documentService";
@@ -15,7 +15,7 @@ import { FileStack, HardDrive, Globe, Search, UploadCloud, Folder as FolderIcon 
 
 const STORAGE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024; // 2GB
 
-export default function DashboardPage() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const folderId = searchParams.get("folder"); // null = General
 
@@ -201,5 +201,13 @@ function StatCard({
       )}
       <p className="mt-1 text-sm text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
