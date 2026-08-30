@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -8,193 +9,201 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
+import { Spinner } from "./spinner";
 import { useConfirmUploadMutation, useCreateUploadRequestMutation } from "@/redux/service/documentService";
+import { useGetAllFoldersQuery } from "@/redux/service/folderService";
 import { uploadFileToPresignedUrl } from "@/lib/upload-file";
 import { formatBytes } from "@/lib/utils";
-import { FileIcon, Loader2, UploadCloud, X } from "lucide-react";
+import { FileIcon, UploadCloud, X, CheckCircle2, XCircle, Folder as FolderIcon } from "lucide-react";
 
 type UploadDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
-type UploadStage = "idle" | "requesting" | "uploading" | "confirming" | "done" | "error";
+type UploadItemStatus = "requesting" | "uploading" | "confirming" | "done" | "error" | "cancelled";
+
+type UploadItem = {
+  id: string;
+  file: File;
+  status: UploadItemStatus;
+  progress: number;
+  errorMessage?: string;
+  abort?: () => void;
+};
 
 export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
+  const folderId = searchParams.get("folder"); // null = General
 
-  const [file, setFile] = useState<File | null>(null);
+  const { data: foldersData } = useGetAllFoldersQuery();
+  const currentFolderName = folderId
+    ? foldersData?.data.find((f) => f.folder_id === folderId)?.name ?? "this folder"
+    : "General";
+
   const [isPublic, setIsPublic] = useState(false);
-  const [stage, setStage] = useState<UploadStage>("idle");
-  const [progress, setProgress] = useState(0);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [items, setItems] = useState<UploadItem[]>([]);
 
   const [createUploadRequest] = useCreateUploadRequestMutation();
   const [confirmUpload] = useConfirmUploadMutation();
 
-  const isBusy = stage === "requesting" || stage === "uploading" || stage === "confirming";
+  const isBusy = items.some(
+    (i) => i.status === "requesting" || i.status === "uploading" || i.status === "confirming"
+  );
 
-  const resetState = () => {
-    setFile(null);
-    setIsPublic(false);
-    setStage("idle");
-    setProgress(0);
-    setErrorMessage("");
+  const updateItem = (id: string, patch: Partial<UploadItem>) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   };
 
-  const handleOpenChange = (next: boolean) => {
-    if (isBusy) return; // don't let it close mid-upload
-    if (!next) resetState();
-    onOpenChange(next);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (selected) setFile(selected);
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-
+  const uploadOne = async (item: UploadItem) => {
     try {
-      // Step 1: request a presigned upload URL
-      setStage("requesting");
+      updateItem(item.id, { status: "requesting" });
+
+      // folder_id captured at click time — the folder selected when the file was added
       const requestRes = await createUploadRequest({
-        file_name: file.name,
-        mime_type: file.type || "application/octet-stream",
-        size: file.size,
+        file_name: item.file.name,
+        mime_type: item.file.type || "application/octet-stream",
+        size: item.file.size,
         is_public: isPublic,
+        folder_id: folderId,
       }).unwrap();
 
       const { document_id, upload_url } = requestRes.data;
 
-      // Step 2: upload the file directly to storage
-      setStage("uploading");
-      await uploadFileToPresignedUrl(upload_url, file, setProgress);
+      updateItem(item.id, { status: "uploading" });
+      const { promise, abort } = uploadFileToPresignedUrl(upload_url, item.file, (pct) =>
+        updateItem(item.id, { progress: pct })
+      );
+      updateItem(item.id, { abort });
 
-      // Step 3: confirm the upload with the backend
-      setStage("confirming");
+      await promise;
+
+      updateItem(item.id, { status: "confirming", abort: undefined });
       await confirmUpload(document_id).unwrap();
 
-      setStage("done");
-      toast.success(`${file.name} uploaded`);
-      resetState();
-      onOpenChange(false);
+      updateItem(item.id, { status: "done" });
+      toast.success(`${item.file.name} uploaded to ${currentFolderName}`);
     } catch (err) {
-      setStage("error");
-            const message =
-        (err as { data?: { detail?: { message?: string } }  })?.data?.detail?.message ??
-        "Invalid email or password";
-      toast.error(message);
+      if ((err as Error)?.name === "AbortError") {
+        updateItem(item.id, { status: "cancelled", abort: undefined });
+        return;
+      }
+      const message =
+        (err as { data?: { detail?: { message?: string } } })?.data?.detail?.message ??
+        "Upload failed";
+      updateItem(item.id, { status: "error", errorMessage: message, abort: undefined });
+      toast.error(`${item.file.name}: ${message}`);
     }
   };
 
-  const stageLabel: Record<UploadStage, string> = {
-    idle: "",
-    requesting: "Preparing upload…",
-    uploading: `Uploading… ${progress}%`,
-    confirming: "Finalizing…",
-    done: "Done",
-    error: "Something went wrong",
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? []);
+    if (selected.length === 0) return;
+
+    const newItems: UploadItem[] = selected.map((file) => ({
+      id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+      file,
+      status: "requesting",
+      progress: 0,
+    }));
+
+    setItems((prev) => [...prev, ...newItems]);
+    newItems.forEach(uploadOne);
+    e.target.value = "";
+  };
+
+  const handleClose = () => {
+    if (isBusy) toast.info("Uploads keep running in the background");
+    setItems([]);
+    setIsPublic(false);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => (!next ? handleClose() : onOpenChange(next))}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Upload document</DialogTitle>
-          <DialogDescription>
-            Choose a file and decide who can see it.
+          <DialogTitle>Upload documents</DialogTitle>
+          <DialogDescription className="flex items-center gap-1.5">
+            <FolderIcon className="h-3.5 w-3.5" />
+            Uploading to <span className="font-medium text-foreground">{currentFolderName}</span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
-          {!file ? (
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border py-10 text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-            >
-              <UploadCloud className="h-6 w-6" strokeWidth={1.5} />
-              <span className="text-sm font-medium">Click to choose a file</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-3 rounded-md border border-border p-3">
-              <FileIcon className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{file.name}</p>
-                <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
-              </div>
-              {!isBusy && stage !== "done" && (
-                <button
-                  type="button"
-                  onClick={() => setFile(null)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border py-8 text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+          >
+            <UploadCloud className="h-6 w-6" strokeWidth={1.5} />
+            <span className="text-sm font-medium">Click to choose files</span>
+          </button>
 
-          <input
-            ref={inputRef}
-            type="file"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
+          <input ref={inputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
 
           <div className="flex items-center justify-between rounded-md border border-border px-3 py-3">
             <div>
               <Label htmlFor="is-public" className="text-sm font-medium">
                 Make public
               </Label>
-              <p className="text-xs text-muted-foreground">
-                Anyone with a share link can view it.
-              </p>
+              <p className="text-xs text-muted-foreground">Applies to files you add from now on.</p>
             </div>
-            <Switch
-              id="is-public"
-              checked={isPublic}
-              onCheckedChange={setIsPublic}
-              disabled={isBusy}
-            />
+            <Switch id="is-public" checked={isPublic} onCheckedChange={setIsPublic} />
           </div>
 
-          {(stage === "requesting" || stage === "uploading" || stage === "confirming") && (
-            <div className="space-y-2">
-              <Progress value={stage === "uploading" ? progress : 100} />
-              <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {stageLabel[stage]}
-              </p>
+          {items.length > 0 && (
+            <div className="max-h-64 space-y-2 overflow-y-auto">
+              {items.map((item) => (
+                <div key={item.id} className="rounded-md border border-border p-3">
+                  <div className="flex items-center gap-3">
+                    <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{item.file.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatBytes(item.file.size)}</p>
+                    </div>
+
+                    {item.status === "done" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                    {item.status === "error" && <XCircle className="h-4 w-4 text-destructive" />}
+                    {["requesting", "uploading", "confirming"].includes(item.status) && (
+                      <button type="button" onClick={() => item.abort?.()} title="Cancel upload">
+                        <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                      </button>
+                    )}
+                    {["cancelled", "error", "done"].includes(item.status) && (
+                      <button
+                        type="button"
+                        onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
+                      >
+                        <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                      </button>
+                    )}
+                  </div>
+
+                  {["requesting", "uploading", "confirming"].includes(item.status) && (
+                    <div className="mt-2 space-y-1">
+                      <Progress value={item.status === "uploading" ? item.progress : 100} />
+                      <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Spinner className="h-3 w-3" />
+                        {item.status === "requesting" && "Preparing…"}
+                        {item.status === "uploading" && `Uploading… ${item.progress}%`}
+                        {item.status === "confirming" && "Finalizing…"}
+                      </p>
+                    </div>
+                  )}
+
+                  {item.status === "cancelled" && <p className="mt-1 text-xs text-muted-foreground">Cancelled</p>}
+                  {item.status === "error" && <p className="mt-1 text-xs text-destructive">{item.errorMessage}</p>}
+                </div>
+              ))}
             </div>
           )}
-
-          {stage === "error" && (
-            <p className="text-sm text-destructive">{errorMessage}</p>
-          )}
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={isBusy}
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleUpload} disabled={!file || isBusy}>
-            {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Upload
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

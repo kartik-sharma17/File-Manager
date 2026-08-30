@@ -8,6 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -25,13 +29,26 @@ import {
   useDeleteDocumentMutation,
   useChangeVisibilityMutation,
   useLazyGetDownloadUrlQuery,
+  useMoveDocumentMutation,
 } from "@/redux/service/documentService";
-import { Download, Eye, EyeOff, Link2, Loader2, MoreVertical, Trash2 } from "lucide-react";
+import { useGetAllFoldersQuery } from "@/redux/service/folderService";
+import {
+  Download,
+  Eye,
+  EyeOff,
+  FolderInput,
+  FolderOpen,
+  Link2,
+  Loader2,
+  MoreVertical,
+  Trash2,
+} from "lucide-react";
 
 type DocumentActionsMenuProps = {
   documentId: string;
   fileName: string;
   isPublic: boolean;
+  currentFolderId?: string | null;
 };
 
 type ApiError = { data?: { message?: string }; message?: string };
@@ -45,6 +62,7 @@ export function DocumentActionsMenu({
   documentId,
   fileName,
   isPublic,
+  currentFolderId = null,
 }: DocumentActionsMenuProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -54,6 +72,10 @@ export function DocumentActionsMenu({
   const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();
   const [getDownloadUrl, { isFetching: isPreparingDownload }] =
     useLazyGetDownloadUrlQuery();
+  const [moveDocument, { isLoading: isMoving }] = useMoveDocumentMutation();
+
+  const { data: foldersData } = useGetAllFoldersQuery();
+  const folders = foldersData?.data ?? [];
 
   const handleToggleVisibility = async () => {
     try {
@@ -71,6 +93,16 @@ export function DocumentActionsMenu({
       window.open(res.data.download_url, "_blank", "noopener,noreferrer");
     } catch (err) {
       toast.error(getErrorMessage(err, "Couldn't get download link"));
+    }
+  };
+
+  const handleMove = async (folderId: string | null) => {
+    if (folderId === currentFolderId) return;
+    try {
+      const res = await moveDocument({ documentId, folderId }).unwrap();
+      toast.success(res.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Couldn't move document"));
     }
   };
 
@@ -116,7 +148,39 @@ export function DocumentActionsMenu({
             <Link2 className="mr-2 h-4 w-4" />
             Get share link
           </DropdownMenuItem>
+
           <DropdownMenuSeparator />
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger disabled={isMoving}>
+              <FolderInput className="mr-2 h-4 w-4" />
+              Move to folder
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem
+                  onClick={() => handleMove(null)}
+                  disabled={currentFolderId === null}
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  General
+                </DropdownMenuItem>
+                {folders.length > 0 && <DropdownMenuSeparator />}
+                {folders.map((f) => (
+                  <DropdownMenuItem
+                    key={f.folder_id}
+                    onClick={() => handleMove(f.folder_id)}
+                    disabled={currentFolderId === f.folder_id}
+                  >
+                    {f.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+
+          <DropdownMenuSeparator />
+
           <DropdownMenuItem
             onClick={() => setDeleteOpen(true)}
             className="text-destructive focus:text-destructive"

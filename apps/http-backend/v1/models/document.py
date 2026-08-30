@@ -13,6 +13,7 @@ class Document(BaseModel):
     is_public: bool = False
     share_token: Optional[str] = None 
     status: str = "uploading"          
+    folder_id: Optional[str] = None 
     checksum: Optional[str] = None     
     created_at: datetime
     updated_at: Optional[datetime] = None

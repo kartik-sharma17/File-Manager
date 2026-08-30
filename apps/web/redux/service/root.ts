@@ -15,6 +15,6 @@ export const RootApiService = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Document"],
+  tagTypes: ["Document", "Folder"],
   endpoints: () => ({}),
 });

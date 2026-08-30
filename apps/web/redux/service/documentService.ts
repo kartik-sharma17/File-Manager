@@ -6,6 +6,7 @@ export type UploadRequestPayload = {
   mime_type: string;
   size: number;
   is_public: boolean;
+  folder_id?: string | null;
 };
 
 export type UploadRequestResponseData = {
@@ -45,6 +46,7 @@ export type DocumentListItem = {
   size: number;
   is_public: boolean;
   status: DocumentStatus;
+  folder_id: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -122,6 +124,16 @@ export const documentService = RootApiService.injectEndpoints({
       }),
       invalidatesTags: ["Document"],
     }),
+    moveDocument: build.mutation<ApiResponse<{ document_id: string; folder_id: string | null }>,
+      { documentId: string; folderId: string | null }
+    >({
+      query: ({ documentId, folderId }) => ({
+        url: `/document/move/${documentId}`,
+        method: "PATCH",
+        body: { folder_id: folderId },
+      }),
+      invalidatesTags: ["Document", "Folder"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -135,4 +147,5 @@ export const {
   useChangeVisibilityMutation,
   useGetAllDocumentsQuery,
   useDeleteDocumentMutation,
+  useMoveDocumentMutation
 } = documentService;

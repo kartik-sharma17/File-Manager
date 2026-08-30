@@ -10,6 +10,7 @@ class UploadRequestSchema(BaseModel):
     mime_type: str = Field(..., min_length=1)
     size: int = Field(..., gt=0, le=MAX_FILE_SIZE)
     is_public: bool = False
+    folder_id: Optional[str] = None 
 
     @field_validator("file_name")
     @classmethod
@@ -40,3 +41,19 @@ class GetDocumentResponseSchema(BaseModel):
     url: Optional[str] = None     
     share_token: Optional[str] = None
     created_at: str
+
+class CreateFolderSchema(BaseModel):
+    name: str
+    parent_id: Optional[str] = None
+
+
+class RenameFolderSchema(BaseModel):
+    name: str
+
+
+class MoveFolderSchema(BaseModel):
+    new_parent_id: Optional[str] = None
+
+
+class MoveDocumentSchema(BaseModel):
+    folder_id: Optional[str] = None

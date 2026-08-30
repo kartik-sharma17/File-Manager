@@ -60,6 +60,7 @@ class DocumentService:
                 is_public=documentData.is_public,
                 share_token=None,
                 status="uploading",
+                folder_id=documentData.folder_id if documentData.folder_id else None,
                 checksum=None,
                 created_at=datetime.now(timezone.utc),
                 updated_at=None,
@@ -438,5 +439,36 @@ class DocumentService:
                 status_code=500,
                 detail={"status": False, "message": "Something went wrong while deleting document"},
             )
+
+    async def MoveDocument(self, user: dict, document_id: str, folder_id: str | None):
+        try:
+            owner_id = str(user["_id"])
+
+            document = await self.collection.find_one({"_id": ObjectId(document_id)})
+
+            if not document:
+                raise HTTPException(status_code=404, detail={"status": False, "message": "Document not found"})
+
+            if document["owner_id"] != owner_id:
+                raise HTTPException(status_code=403, detail={"status": False, "message": "You do not have access to this document"})
+
+            if folder_id:
+                folder = await getDB()["Folder"].find_one({"_id": ObjectId(folder_id)})
+                if not folder:
+                    raise HTTPException(status_code=404, detail={"status": False, "message": "Target folder not found"})
+                if folder["owner_id"] != owner_id:
+                    raise HTTPException(status_code=403, detail={"status": False, "message": "You do not have access to the target folder"})
+
+            await self.collection.update_one(
+                {"_id": ObjectId(document_id)},
+                {"$set": {"folder_id": folder_id, "updated_at": datetime.now(timezone.utc)}},
+            )
+
+            return response(message="Document moved successfully", data={"document_id": document_id, "folder_id": folder_id})
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.info(f"this is a issue {str(e)}")
+            raise HTTPException(status_code=500, detail={"status": False, "message": "Something went wrong while moving document"})
 
 document_service = DocumentService()

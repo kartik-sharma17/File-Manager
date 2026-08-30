@@ -11,7 +11,13 @@ function getFileIcon(mimeType: string) {
   return FileIcon;
 }
 
-export function DocumentCard({ document }: { document: DocumentListItem }) {
+export function DocumentCard({
+  document,
+  currentFolderId = null,
+}: {
+  document: DocumentListItem;
+  currentFolderId?: string | null;
+}) {
   const Icon = getFileIcon(document.mime_type);
   const isFailed = document.status === "failed";
   const isUploading = document.status === "uploading";
@@ -28,6 +34,7 @@ export function DocumentCard({ document }: { document: DocumentListItem }) {
             documentId={document.document_id}
             fileName={document.file_name}
             isPublic={document.is_public}
+            currentFolderId={currentFolderId}
           />
         )}
       </div>

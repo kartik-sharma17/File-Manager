@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from v1.schema import UploadRequestSchema
+from v1.schema import UploadRequestSchema, MoveDocumentSchema
 from v1.services import document_service
 from v1.dependencies import verifyUserDependency
 
@@ -51,3 +51,7 @@ async def getAllDocuments(user=Depends(verifyUserDependency)):
 @documentRouter.delete("/delete/{document_id}")
 async def deleteDocument(document_id: str, user=Depends(verifyUserDependency)):
     return await document_service.DeleteDocument(user, document_id)
+
+@documentRouter.patch("/move/{document_id}")
+async def moveDocument(document_id: str, documentData: MoveDocumentSchema, user=Depends(verifyUserDependency)):
+    return await document_service.MoveDocument(user, document_id, documentData.folder_id)
